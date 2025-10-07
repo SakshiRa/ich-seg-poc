@@ -13,3 +13,9 @@ A minimal FastAPI + MONAI proof of concept for intracranial hemorrhage segmentat
 ```bash
 docker build -t ich-seg-poc .
 docker run -p 8080:8080 ich-seg-poc
+```
+## 🧩 Example inference call
+```bash
+curl -X POST "http://localhost:8080/inference" \
+  -F "file=@sample_data/TBI_INVZR247VVT.nii"
+```

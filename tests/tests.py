@@ -23,3 +23,18 @@ def test_inference_upload(tmp_path):
         assert response.status_code == 200
         data = response.json()
         assert "segmentation_result" in data or "message" in data
+
+def test_inference_endpoint(tmp_path):
+    test_file = "sample_data/TBI_INVZR247VVT.nii"
+    if not os.path.exists(test_file):
+        return
+
+    with open(test_file, "rb") as f:
+        files = {"file": ("TBI_INVZR247VVT.nii", f, "application/octet-stream")}
+        response = client.post("/inference", files=files)
+        assert response.status_code == 200
+        data = response.json()
+        assert "mask_file" in data
+        assert "overlay_file" in data
+        assert os.path.exists(data["mask_file"])
+        assert os.path.exists(data["overlay_file"])

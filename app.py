@@ -1,5 +1,7 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse
+import matplotlib.pyplot as plt
 import tempfile
 import os
 import nibabel as nib
@@ -25,6 +27,45 @@ def safe_load_nifti(file_path):
     else:
         return nib.load(file_path)
 
+@app.post("/inference")
+async def inference(file: UploadFile = File(...)):
+    # Save uploaded file
+    suffix = ".nii.gz" if file.filename.endswith(".gz") else ".nii"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+
+    # Load NIfTI safely
+    img = safe_load_nifti(tmp_path)
+    data = img.get_fdata()
+
+    # --- Placeholder segmentation ---
+    seg = np.zeros_like(data)
+    seg[data > np.percentile(data, 99)] = 1  # fake ICH mask
+
+    # --- Save mask ---
+    mask_img = nib.Nifti1Image(seg.astype(np.uint8), affine=img.affine)
+    mask_path = tmp_path.replace(suffix, "_mask.nii.gz")
+    nib.save(mask_img, mask_path)
+
+    # --- Save mid-slice overlay ---
+    mid_slice = data.shape[2] // 2
+    plt.figure(figsize=(6,6))
+    plt.imshow(data[:, :, mid_slice], cmap='gray')
+    plt.imshow(seg[:, :, mid_slice], cmap='Reds', alpha=0.5)
+    overlay_path = tmp_path.replace(suffix, "_overlay.png")
+    plt.axis('off')
+    plt.savefig(overlay_path, bbox_inches='tight')
+    plt.close()
+
+    os.remove(tmp_path)  # clean up original
+
+    return {
+        "mask_file": mask_path,
+        "overlay_file": overlay_path,
+        "shape": data.shape,
+        "status": "Inference complete (placeholder)"
+    }
 
 @app.post("/segment")
 async def segment_ct(file: UploadFile = File(...)):
