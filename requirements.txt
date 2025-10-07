@@ -1,5 +1,9 @@
 fastapi
 uvicorn
-nibabel
-numpy
+pydantic
 python-multipart
+torch
+monai
+nibabel
+pytest
+httpx
